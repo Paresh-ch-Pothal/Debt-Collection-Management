@@ -7,6 +7,6 @@ const router = express.Router();
 
 
 router.post('/send_message', fetchuser , messageController.sendMessage)
-router.post('/get_reply' , messageController.getReply)
+router.post('/get_reply', messageController.getReplyandWebhook)
 
 export default router;

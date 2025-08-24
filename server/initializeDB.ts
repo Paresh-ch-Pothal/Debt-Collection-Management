@@ -8,7 +8,8 @@ export async function initDb() {
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL
+      password TEXT NOT NULL,
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     
     CREATE TABLE IF NOT EXISTS csv_records (
@@ -21,7 +22,8 @@ export async function initDb() {
       response TEXT,
       send_status BOOLEAN DEFAULT FALSE,
       createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      user_id UUID REFERENCES users(id) ON DELETE CASCADE
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      chat_id BIGINT UNIQUE
     );
   `);
 }

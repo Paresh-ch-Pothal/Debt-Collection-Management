@@ -19,6 +19,7 @@ interface CustomerRecord {
   sentiment?: string;
   response?: string;
   send_status?: boolean;
+  chat_id?: string;
 }
 
 type SortField = keyof CustomerRecord;
@@ -217,6 +218,38 @@ const Dashboard = () => {
     }).format(isNaN(numAmount) ? 0 : numAmount);
   };
 
+  const handleSendMessage = async (recordId: number) => {
+    try {
+      if (!recordId) {
+        return;
+      }
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("User is not authenticated. Please login.");
+        return;
+      }
+      const response = await axios.post(
+        `${baseUrl}/api/message/send_message`,
+        { recordId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      console.log(response)
+      if (response.data.success) {
+        setToastConfig({ success: true, message: response.data.message });
+        setShowToast(true);
+      }
+    } catch (error: any) {
+      console.log(error)
+      setToastConfig({ success: false, message: error?.response?.data?.message });
+      setShowToast(true)
+    }
+
+  }
+
   // File Upload Component
   if (!fileUploaded && !showDashboard) {
     return (
@@ -308,6 +341,13 @@ const Dashboard = () => {
   // Dashboard Component (original dashboard code)
   return (
     <div className="min-h-screen bg-gray-50">
+      {showToast && (
+        <CustomToast
+          success={toastConfig.success}
+          message={toastConfig.message}
+          onClose={() => setShowToast(false)}
+        />
+      )}
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-6">
@@ -447,6 +487,7 @@ const Dashboard = () => {
                     Sentiment {sortField === 'sentiment' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Response</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Send</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -472,14 +513,14 @@ const Dashboard = () => {
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        disabled={record.send_status}
+                        onClick={() => { handleSendMessage(record.id) }}
+                        disabled={!record.chat_id}
                         className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 
-      ${!record.send_status
+      ${record.chat_id
                             ? "bg-blue-600 hover:bg-blue-700 text-white"
                             : "bg-gray-400 text-gray-200 cursor-not-allowed"}`}
                       >
                         <Send className="w-4 h-4" />
-                        <span>Send</span>
                       </button>
                     </td>
 
