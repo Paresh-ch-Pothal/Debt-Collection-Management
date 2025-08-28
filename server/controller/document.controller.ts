@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express'
 import { pool } from '../connectSQL';
+import axios from "axios";
 
 
 const uploadFile = async (req: Request, res: Response) => {
@@ -30,14 +31,14 @@ const uploadFile = async (req: Request, res: Response) => {
     }
 }
 
-const getAllRows = async(req:Request,res:Response) => {
+const getAllRows = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.user?._id;
         if (!userId) {
             return res.status(400).json({ message: "User ID is required", success: false });
         }
         const rows = await pool.query(
-            `SELECT * FROM CSV_RECORDS WHERE user_id = $1`,[userId]
+            `SELECT * FROM CSV_RECORDS WHERE user_id = $1`, [userId]
         )
         if (rows.rowCount === 0) {
             return res.status(404).json({ message: "No records found", success: false });
@@ -49,4 +50,37 @@ const getAllRows = async(req:Request,res:Response) => {
     }
 }
 
-export default {uploadFile , getAllRows}
+const getSentiment = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.user?._id;
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required", success: false });
+        }
+        const rows = await pool.query(
+            `SELECT * FROM CSV_RECORDS WHERE user_id = $1`, [userId]
+        )
+        if (rows.rowCount === 0) {
+            return res.status(404).json({ message: "No records found", success: false });
+        }
+        const allRows = rows.rows;
+        for (const row of allRows) {
+            if (row.response == "Pending") continue;  // skip empty replies
+
+            const response = await axios.post(`${process.env.SENTIMENT_API_URL}/predict`, {
+                text: row.response
+            });
+
+            const sentiment = response.data.sentiment;
+            await pool.query(
+                `UPDATE csv_records SET sentiment = $1 WHERE id = $2`,
+                [sentiment, row.id]
+            );
+        }
+        return res.status(200).json({ message: "Updated Successfully", success: true });
+    } catch (error) {
+        console.error("Error occured while fetching data", error);
+        return res.status(500).json({ message: "Internal server error", success: false });
+    }
+}
+
+export default { uploadFile, getAllRows, getSentiment }

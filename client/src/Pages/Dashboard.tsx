@@ -1,6 +1,6 @@
 
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, use } from 'react';
 import {
   Search, Filter, Download, Eye, Edit, Trash2, Plus, RefreshCw,
   TrendingUp, TrendingDown, Users, DollarSign, Upload, FileText, CheckCircle,
@@ -180,6 +180,23 @@ const Dashboard = () => {
 
     return filtered;
   }, [records, searchTerm, filterSentiment, sortField, sortDirection]);
+
+
+  const fetchSentiment = async () => {
+    try {
+      const res = await axios.post(`${baseUrl}/api/document/get_sentiment`, {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      console.log(res.data);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+  useEffect(() => {
+    fetchSentiment();
+  },[]) 
 
   /** 🔹 Pagination */
   const totalPages = Math.ceil(filteredData.length / recordsPerPage);

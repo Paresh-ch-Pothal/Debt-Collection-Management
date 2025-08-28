@@ -8,5 +8,6 @@ const router = express.Router();
 
 router.post('/upload_file', fetchuser , documentController.uploadFile)
 router.get('/get_records', fetchuser , documentController.getAllRows)
+router.post('/get_sentiment', fetchuser , documentController.getSentiment)
 
 export default router;
