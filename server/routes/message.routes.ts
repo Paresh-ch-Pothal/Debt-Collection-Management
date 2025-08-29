@@ -8,5 +8,6 @@ const router = express.Router();
 
 router.post('/send_message', fetchuser , messageController.sendMessage)
 router.post('/get_reply', messageController.getReplyandWebhook)
+router.get('/get_report_details/:id', fetchuser, messageController.getCsvRecordDetails)
 
 export default router;

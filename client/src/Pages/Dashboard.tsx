@@ -2,12 +2,14 @@
 
 import React, { useState, useMemo, useEffect, useCallback, use } from 'react';
 import {
-  Search, Filter, Download, Eye, Edit, Trash2, Plus, RefreshCw,
+  Search, Filter, Download, RefreshCw,
   TrendingUp, TrendingDown, Users, DollarSign, Upload, FileText, CheckCircle,
-  Send
+  Send, FileSearch,
+  Plus
 } from 'lucide-react';
 import CustomToast from '../Components/CustomToast';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 // Define types
 interface CustomerRecord {
@@ -16,8 +18,8 @@ interface CustomerRecord {
   email: string;
   phoneno: string;
   debt: number;
-  sentiment?: string;
-  response?: string;
+  sentiment?: string | "Pending";
+  response?: string | "Pending";
   send_status?: boolean;
   chat_id?: string;
 }
@@ -36,6 +38,7 @@ const Dashboard = () => {
   const [sortField, setSortField] = useState<SortField | ''>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [refresh, setRefresh] = useState<number>(0);
 
   const [showToast, setShowToast] = useState(false);
   const [toastConfig, setToastConfig] = useState<{ success: boolean; message: string }>({
@@ -52,13 +55,26 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await axios.get(`${baseUrl}/api/document/get_records`, {
+      const response = await axios.get(`${baseUrl}/api/document/get_sentiment`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.data.success) {
-        setRecords(response.data.data);
-        console.log(response.data.data)
+        const transformed = response.data.data.map((record: any) => {
+          const replies = record.messages.filter((m: any) => m.direction === "reply");
+          const lastReply = replies.sort(
+            (a: any, b: any) => new Date(b.createdat).getTime() - new Date(a.createdat).getTime()
+          )[0];
+
+          return {
+            ...record,
+            response: lastReply?.message || "Pending",
+            sentiment: lastReply?.sentiment || "Pending"
+          };
+        });
+
+        setRecords(transformed);
+        console.log(transformed)
         setShowDashboard(true);
       }
     } catch (error: any) {
@@ -74,7 +90,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     getAllRecords();
-  }, []);
+  }, [refresh]);
 
   const processFileUpload = async (file: File) => {
     if (file.type !== "text/csv") return;
@@ -182,22 +198,6 @@ const Dashboard = () => {
   }, [records, searchTerm, filterSentiment, sortField, sortDirection]);
 
 
-  const fetchSentiment = async () => {
-    try {
-      const res = await axios.post(`${baseUrl}/api/document/get_sentiment`, {}, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      console.log(res.data);
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  };
-  useEffect(() => {
-    fetchSentiment();
-  },[]) 
-
   /** 🔹 Pagination */
   const totalPages = Math.ceil(filteredData.length / recordsPerPage);
   const startIndex = (currentPage - 1) * recordsPerPage;
@@ -265,6 +265,14 @@ const Dashboard = () => {
       setShowToast(true)
     }
 
+  }
+
+
+  // to show the metrics for each csv records
+  const navigate = useNavigate();
+  const showMetrics = async (recordId: any) => {
+    console.log(recordId)
+    navigate(`/metrics/${recordId}`);
   }
 
   // File Upload Component
@@ -382,7 +390,7 @@ const Dashboard = () => {
                 <Download className="w-4 h-4" />
                 <span>Export</span>
               </button>
-              <button className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium flex items-center space-x-2">
+              <button onClick={() => { setRefresh(prev => prev + 1) }} className="cursor-pointer px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium flex items-center space-x-2">
                 <RefreshCw className="w-4 h-4" />
                 <span>Refresh</span>
               </button>
@@ -505,6 +513,7 @@ const Dashboard = () => {
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Response</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Send</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">View Report</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -524,20 +533,35 @@ const Dashboard = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="max-w-xs truncate text-gray-600" title={record.response}>
-                        {record.response}
+                      <div
+                        className="text-gray-600"
+                        title={record.response}
+                      >
+                        {record.response && record.response.length > 20 ? record.response.slice(0, 20) + '...' : record.response}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <button
                         onClick={() => { handleSendMessage(record.id) }}
                         disabled={!record.chat_id}
-                        className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 
-      ${record.chat_id
+                        className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 cursor-pointer 
+                            ${record.chat_id
                             ? "bg-blue-600 hover:bg-blue-700 text-white"
                             : "bg-gray-400 text-gray-200 cursor-not-allowed"}`}
                       >
                         <Send className="w-4 h-4" />
+                      </button>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => { showMetrics(record.id) }}
+                        disabled={!record.chat_id}
+                        className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 cursor-pointer 
+                            ${record.chat_id
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-gray-400 text-gray-200 cursor-not-allowed"}`}
+                      >
+                        <FileSearch className="w-4 h-4" />
                       </button>
                     </td>
 

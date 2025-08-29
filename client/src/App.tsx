@@ -6,6 +6,7 @@ import Signup from './Pages/Signup'
 import Footer from './Components/Footer'
 import Header from './Components/Header'
 import Dashboard from './Pages/Dashboard'
+import MetricsDashboard from './Pages/MetricsDashboard'
 
 function App() {
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/metrics/:recordId" element={<MetricsDashboard />} />
       </Routes>
       <Footer />
     </>
